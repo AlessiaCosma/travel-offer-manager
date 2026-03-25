@@ -1,1 +1,1 @@
-print()
+print("ALESSIA+MIHA=WOW")
