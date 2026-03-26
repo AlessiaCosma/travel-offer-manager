@@ -184,5 +184,5 @@ class TrainClient:
         }
         return info
 
-x = TrainClient()
-print(x.get_train_info("Suceava", "Bucureşti Nord Gr.A"))
+# x = TrainClient()
+# print(x.get_train_info("Suceava", "Bucureşti Nord Gr.A"))
