@@ -222,9 +222,3 @@ class AmadeusClient:
                 except KeyError: #if there is no phone number
                     hotel_name_price_contact.append((hotel["hotel"]["name"],float(hotel['offers'][0]["price"]["total"])))
             return hotel_name_price_contact
-
-# x = AmadeusClient()
-# print(x.get_flights())
-#
-# y = AmadeusClient()
-# print(y.get_hotels(city_name="Paris"))

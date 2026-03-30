@@ -80,8 +80,3 @@ class OsrmClient:
             "price": final_price,
         }
         return info
-
-# city1 = (48.856613, 2.352222) # Paris
-# city2 = (52.520008, 13.404954) # Berlin
-# transport = OsrmClient()
-# print(transport.get_car_info(city1, city2))

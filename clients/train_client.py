@@ -151,38 +151,36 @@ class TrainClient:
                     heapq.heappush(pq, (new_time, neighbor, new_dist))
         return None
 
-    def get_train_info(self, start, end):
-        """
-        Retrieves summarized travel information between two stations.
+    # def get_train_info(self, start, end):
+    #     """
+    #     Retrieves summarized travel information between two stations.
+    #
+    #     This method computes both the shortest distance route and the fastest route,
+    #     then returns a combined overview including distances, travel times, and
+    #     an estimated ticket price.
+    #
+    #     Args:
+    #         start (str): Name of the departure station.
+    #         end (str): Name of the destination station.
+    #
+    #     Returns:
+    #         dict | None:
+    #             - dict: A dictionary containing:
+    #                 - "distance": tuple of distances (shortest, fastest)
+    #                 - "time": tuple of travel times (shortest, fastest)
+    #                 - "price": estimated ticket price based on average distance
+    #             - None: If no valid route exists between the stations.
+    #     """
+    #     best_distance = self.shortest_distance(start, end)
+    #     best_time = self.shortest_time(start, end)
+    #     if best_distance is None or best_time is None:
+    #         return None
+    #     distance1, time1 = best_distance
+    #     distance2, time2 = best_time
+    #     info = {
+    #         "distance": (round(distance1, 2), round(distance2, 2)),
+    #         "time": (round(time1, 2), round(time2, 2)),
+    #         "price": round(self.price * ((distance1 + distance2)/2), 2),
+    #     }
+    #     return info
 
-        This method computes both the shortest distance route and the fastest route,
-        then returns a combined overview including distances, travel times, and
-        an estimated ticket price.
-
-        Args:
-            start (str): Name of the departure station.
-            end (str): Name of the destination station.
-
-        Returns:
-            dict | None:
-                - dict: A dictionary containing:
-                    - "distance": tuple of distances (shortest, fastest)
-                    - "time": tuple of travel times (shortest, fastest)
-                    - "price": estimated ticket price based on average distance
-                - None: If no valid route exists between the stations.
-        """
-        best_distance = self.shortest_distance(start, end)
-        best_time = self.shortest_time(start, end)
-        if best_distance is None or best_time is None:
-            return None
-        distance1, time1 = best_distance
-        distance2, time2 = best_time
-        info = {
-            "distance": (round(distance1, 2), round(distance2, 2)),
-            "time": (round(time1, 2), round(time2, 2)),
-            "price": round(self.price * ((distance1 + distance2)/2), 2),
-        }
-        return info
-
-# x = TrainClient()
-# print(x.get_train_info("Suceava", "Bucureşti Nord Gr.A"))
