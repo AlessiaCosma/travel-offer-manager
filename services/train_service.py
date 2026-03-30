@@ -59,6 +59,3 @@ class TrainService:
             if ro_end in station:
                 ro_end = station
         return ro_start, ro_end
-#
-# x = TrainService()
-# print(x.get_train_info("Suceava", "Sebeş"))
