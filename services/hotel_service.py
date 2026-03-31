@@ -31,7 +31,11 @@ class HotelService:
         """
         new_address = self.geolocator.geocode(address, timeout=10)
         if new_address is not None:
-            info = self.client.get_hotels(check_in=check_in, check_out=check_out, geocode=(new_address.latitude, new_address.longitude), price_range=price_range, ratings=ratings, adults=adults)
+            try:
+                info = self.client.get_hotels(check_in=check_in, check_out=check_out, geocode=(new_address.latitude, new_address.longitude), price_range=price_range, ratings=ratings, adults=adults)
+            except KeyError:
+                info = self.client.get_hotels(check_in=check_in, check_out=check_out, city_name=address,
+                                              price_range=price_range, ratings=ratings, adults=adults)
         else:
             info = self.client.get_hotels(check_in=check_in, check_out=check_out, city_name=address, price_range=price_range, ratings=ratings, adults=adults)
         if info is None:
