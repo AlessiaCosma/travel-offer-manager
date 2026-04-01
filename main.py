@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from threading import Thread
 
 try:
+    from tkcalendar import Calendar
     from tkcalendar import DateEntry
     HAS_CALENDAR = True
 except ImportError:
@@ -18,6 +19,8 @@ except ImportError:
     HAS_MPL = False
 
 try:
+    from clients.osrm_client import OsrmClient
+    from clients.train_client import TrainClient
     from clients.amadeus_client import AmadeusClient
     from services.flight_service import FlightService
     from services.car_service import CarService
@@ -103,19 +106,37 @@ def styled_combo(parent, values, textvariable=None, width=14):
 
 def outlined_date(parent, textvariable=None, width=14):
     wrap = tk.Frame(parent, bg=C["input_bd"], padx=1, pady=1)
+
     if HAS_CALENDAR:
         from datetime import date
-        d = DateEntry(wrap, textvariable=textvariable, font=FB,
-                      background=C["accent1"], foreground="white",
-                      normalbackground=C["input"], normalforeground=C["text"],
-                      borderwidth=0, date_pattern="yyyy-mm-dd",
-                      mindate=date.today(), width=width)
-        d.pack(fill="x")
+        d = DateEntry( wrap,
+            textvariable=textvariable,
+            font=FB,
+            background=C["accent1"],     # header calendar
+            foreground="white",
+            normalbackground=C["input"], # input field
+            normalforeground=C["text"],
+            borderwidth=0,
+            date_pattern="yyyy-mm-dd",
+            mindate=date.today(),
+            width=width,
+            showweeknumbers=False
+        )
+        d.pack(fill="x", padx=2, pady=2)
         return wrap, d
     else:
-        e = tk.Entry(wrap, textvariable=textvariable, width=width, font=FB,
-                     fg=C["text"], bg=C["input"], insertbackground=C["accent1"],
-                     relief="flat", bd=4, highlightthickness=0)
+        e = tk.Entry(
+            wrap,
+            textvariable=textvariable,
+            width=width,
+            font=FB,
+            fg=C["text"],
+            bg=C["input"],
+            insertbackground=C["accent1"],
+            relief="flat",
+            bd=4,
+            highlightthickness=0
+        )
         e.pack(fill="x")
         return wrap, e
 
