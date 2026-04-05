@@ -9,8 +9,8 @@ class OsrmClient:
             "LPG": 4.01,
         }
         self.car_consumption = { # l/100km
-            "gasoline": 7,
-            "diesel": 5,
+            "gasoline": 7.0,
+            "diesel": 5.0,
             "LPG": 8.2,
         }
 
@@ -44,7 +44,7 @@ class OsrmClient:
 
         return distance, time
 
-    def get_car_info(self, departure_city, destination_city, car_type=None):
+    def get_car_info(self, departure_city, destination_city, car_type=None, consumption=None):
         """
         Calculates travel details for a car trip between two locations.
 
@@ -56,6 +56,7 @@ class OsrmClient:
             destination_city (tuple[float, float]): Coordinates of the destination location (latitude, longitude).
             car_type (str | None): Type of fuel used by the car ("gasoline", "diesel", "LPG").
                 Defaults to "diesel" if not specified or invalid.
+            consumption (float | None): The car consumption
 
         Returns:
             dict | None:
@@ -72,7 +73,10 @@ class OsrmClient:
             return None
         distance, time = result
         fuel_price = self.fuel_price[car_type]
-        car_consumption = self.car_consumption[car_type]
+        if consumption is None:
+            car_consumption = self.car_consumption[car_type]
+        else:
+            car_consumption = consumption
         final_price = ((distance / 100) * car_consumption) * fuel_price
         info = {
             "distance": distance,
