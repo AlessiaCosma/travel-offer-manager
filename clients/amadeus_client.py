@@ -69,7 +69,8 @@ class AmadeusClient:
         else:
             return response.json()['data'][0]['iataCode']
 
-    def get_flights(self, original_city, destination_city, departure_date, return_date=None, adult_number=1, currency_code="EUR"):
+    def get_flights(self, original_city, destination_city, departure_date, return_date=None, adult_number=1,
+                    currency_code="EUR", nonstop=None, travel_class= None):
         """
         Searches for available flight offers based on the provided criteria.
 
@@ -80,6 +81,14 @@ class AmadeusClient:
             return_date (str | None): Return date in YYYY-MM-DD format (optional).
             adult_number (int): Number of adult passengers. Default is 1.
             currency_code (str): Currency code for pricing (e.g., "EUR"). Default is "EUR".
+            travel_class (str | None): Desired travel class. Possible values:
+                - "ECONOMY"
+                - "PREMIUM_ECONOMY"
+                - "BUSINESS"
+                - "FIRST"
+                If None, no class filter is applied.
+            nonstop (str | None): If True, returns only direct (non-stop) flights. Possible values: "true" or "false"
+
         Returns:
             list[dict] | None:
                 - list[dict]: A list of flight offers if results are found.
@@ -92,8 +101,9 @@ class AmadeusClient:
             "destinationLocationCode": dest_code,
             "departureDate": departure_date,
             "adults": adult_number,
-            #"nonStop": nonstop,
+            "nonStop": nonstop,
             "currencyCode": currency_code,
+            "travelClass": travel_class,
             #"max": "10",
         }
         if return_date is not None:
@@ -166,7 +176,8 @@ class AmadeusClient:
                 hotel_code.append(hotels['hotelId'])
             return hotel_code
 
-    def get_hotels(self, check_in, check_out, city_name=None,  geocode=None, price_range=None,  ratings=None, adults=1, currency="EUR"):
+    def get_hotels(self, check_in, check_out, city_name=None,  geocode=None, price_range=None,  ratings=None, adults=1,
+                   currency="EUR", radius=5, room_quantity=None, board_type=None):
         """
         Searches for hotel offers based on city name or geographic coordinates.
 
@@ -174,37 +185,46 @@ class AmadeusClient:
             check_in (str): Check-in date in YYYY-MM-DD format.
             check_out (str): Check-out date in YYYY-MM-DD format.
             city_name (str | None): Name of the city where hotels should be searched.
-            geocode (tuple[float, float] | None): Geographic coordinates in the form (lat, lng).
+            geocode (tuple[float, float] | None): Geographic coordinates in the form (latitude, longitude).
             price_range (str | None): Desired price range for hotels (optional).
             ratings (list[str] | int | None): Desired hotel rating(s) in stars (optional).
             adults (int): Number of adult guests. Default is 1.
-            currency (str): Currency code for hotel prices (e.g., "EUR").
+            currency (str): Currency code for prices (e.g., "EUR").
+            radius (int): Search radius in kilometers. Default is 5 km.
+            room_quantity (int | None): Number of rooms required.
+            board_type (str | None): Meal plan type ("ROOM_ONLY", "BED_AND_BREAKFAST", "HALF_BOARD", "FULL_BOARD",
+                "ALL_INCLUSIVE").
 
         Returns:
-            list[tuple] | None:
-                - list[tuple]: A list containing hotel information:
-                    (hotel_name, price, phone_number?) depending on availability.
-                - None: If the API request fails or no valid search parameters are provided.
+            tuple[list[tuple], list[list]] | None:
+                - First element: list of hotel tuples:
+                    (name, price, currency, phone?) depending on availability.
+                - Second element: list of room detail lists.
+                - None: If the request fails or no valid input is provided.
         """
         if geocode is not None and ratings is not None:
             lat, lng = geocode
-            hotel_code = self.get_hotel_code_geocode(lat, lng, ratings=ratings)
+            hotel_code = self.get_hotel_code_geocode(lat, lng, ratings=ratings, radius=radius)
         elif geocode is not None:
             lat, lng = geocode
-            hotel_code = self.get_hotel_code_geocode(lat, lng)
+            hotel_code = self.get_hotel_code_geocode(lat, lng, radius=radius)
         elif city_name is not None and ratings is not None:
-            hotel_code = self.get_hotel_code_city(city_name, ratings=ratings)
+            hotel_code = self.get_hotel_code_city(city_name, ratings=ratings, radius=radius)
         elif city_name is not None:
-            hotel_code = self.get_hotel_code_city(city_name)
+            hotel_code = self.get_hotel_code_city(city_name, radius=radius)
         else:
             return None
-        hotel_code = hotel_code[:20]
+        if hotel_code is None:
+            return None
+        hotel_code = hotel_code[:50]
         query = {
-            "hotelIds": ",".join(hotel_code), # First 20 hotels from the list
+            "hotelIds": ",".join(hotel_code), # First 50 hotels from the list
             "adults": adults,
             "checkInDate": check_in,
             "checkOutDate": check_out,
             "currency": currency,
+            "roomQuantity": room_quantity,
+            "boardType": board_type
         }
 
         if price_range is not None:
@@ -212,13 +232,36 @@ class AmadeusClient:
 
         response = requests.get(url=self.hotel_search_endpoint, params=query, headers=self.header)
         if response.status_code != 200:
-            return None
-        else:
-            hotel_name_price_contact = []
-            for hotel in response.json()['data']:
+            hotel_code = hotel_code[:20]
+            query["hotelIds"] = ",".join(hotel_code) # First 20 hotels from the list
+            response = requests.get(url=self.hotel_search_endpoint, params=query, headers=self.header)
+            if response.status_code != 200:
+                return None
+        hotel_name_price_contact = []
+        room_info = []
+        for hotel in response.json()['data']:
+            try:
+                hotel_name_price_contact.append((hotel["hotel"]["name"],
+                                                 float(hotel['offers'][0]["price"]["total"]),
+                                                 hotel['offers'][0]["price"]["currency"],
+                                                 hotel["hotel"]["contact"]["phone"]))
+            except KeyError: #if there is no phone number
+                hotel_name_price_contact.append((hotel["hotel"]["name"],
+                                                 float(hotel['offers'][0]["price"]["total"]),
+                                                 hotel['offers'][0]["price"]["currency"]))
+            offers = hotel["offers"]
+            current_room =[]
+            for offer in offers:
                 try:
-                    hotel_name_price_contact.append((hotel["hotel"]["name"],float(hotel['offers'][0]["price"]["total"]), hotel["hotel"]["contact"]["phone"]))
-                except KeyError: #if there is no phone number
-                    hotel_name_price_contact.append((hotel["hotel"]["name"],float(hotel['offers'][0]["price"]["total"])))
-            return hotel_name_price_contact
+                    current_room.append(offer["roomInformation"]["description"])
+                    current_room.append(offer["roomInformation"]["typeEstimated"]["category"])
+                    try:
+                        current_room.append(offer["roomInformation"]["typeEstimated"]["bedType"])
+                        current_room.append(int(offer["roomInformation"]["typeEstimated"]["beds"]))
+                    except KeyError:
+                        pass
+                except KeyError:
+                    current_room=None
 
+            room_info.append(current_room)
+        return hotel_name_price_contact, room_info
