@@ -1,12 +1,13 @@
 from clients.osrm_client import OsrmClient
-from geopy.geocoders import Nominatim
+from utils.geocoding import Geocoding
+from utils.currency_converter import currency_converter
 
 class CarService:
     def __init__(self):
         self.car_client = OsrmClient()
-        self.geolocator = Nominatim(user_agent="my_app")
+        self.geocoder = Geocoding()
 
-    def get_car_info(self, start, end, car_type=None):
+    def get_car_info(self, start, end, car_type=None, consumption=None, currency_code="EUR"):
         """
         Retrieves travel information for a car trip between two locations.
 
@@ -19,6 +20,8 @@ class CarService:
             end (str): Destination location (city, address, or place name).
             car_type (str | None): Type of fuel used by the car ("gasoline", "diesel", "LPG").
                 Defaults to "diesel" if not specified or invalid.
+            consumption (float | None): The car consumption
+            currency_code (str): Currency code for pricing (e.g., "EUR"). Default is "EUR".
 
         Returns:
             dict | None:
@@ -26,12 +29,23 @@ class CarService:
                     - "distance": Distance in kilometers
                     - "time": Travel time in hours
                     - "price": Estimated fuel cost
+                    - "speed": tuple of estimated speed
                 - None: If geocoding fails or route cannot be calculated.
         """
-        start_location = self.geolocator.geocode(start, timeout=10)
-        end_location = self.geolocator.geocode(end, timeout=10)
-        if start_location is not None and end_location is not None:
-            start_coordinates = (start_location.latitude, start_location.longitude)
-            end_coordinates = (end_location.latitude, end_location.longitude)
-            return self.car_client.get_car_info(start_coordinates, end_coordinates, car_type)
+        start_coordinates = self.geocoder.geocode(start)
+        end_coordinates = self.geocoder.geocode(end)
+        if start_coordinates is not None and end_coordinates is not None:
+            info = self.car_client.get_car_info(departure_city=start_coordinates, destination_city=end_coordinates,
+                                                car_type=car_type, consumption=consumption)
+            if info is None:
+                return None
+            if currency_code != "RON":
+                new_price = currency_converter(info["price"], "RON", currency_code)
+                if new_price is not None:
+                    info["price"] = new_price
+                elif currency_code == "EUR":
+                    info["price"] = info["price"]/5
+            info["price"] = round(info["price"], 2)
+            info["speed"] = round(info["distance"] / info["time"], 2)
+            return info
         return None
