@@ -8,7 +8,7 @@ This software application facilitates travel planning in tourism through multi-c
 - Comparison of different means of transport.
 - Data visualization with Matplotlib.
 - Intuitive graphical user interface built with Tkinter.
-- Uses XML/CSV files and external APIs for data handling.
+- Uses XML files and external APIs for data handling.
 
 ## Technologies
 
@@ -16,7 +16,7 @@ This software application facilitates travel planning in tourism through multi-c
 - Tkinter (graphical interface)
 - Matplotlib (charts and plots)
 - External APIs
-- XML and CSV files for data management
+- XML files for data management
 
 ## Usage
 
