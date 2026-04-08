@@ -2,29 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from threading import Thread
 from tkcalendar import DateEntry
-
-try:
-    import matplotlib
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-    from matplotlib.figure import Figure
-    from tkcalendar import Calendar
-
-    HAS_CALENDAR = True
-except ImportError:
-    HAS_CALENDAR = False
-
-try:
-    import matplotlib
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-    from matplotlib.figure import Figure
-
-    matplotlib.use("TkAgg")
-    HAS_MPL = True
-except ImportError:
-    import matplotlib
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-    from matplotlib.figure import Figure
-    HAS_MPL = False
+from utils.interface import *
+from statistics.graphs import Graphs
 
 try:
     from clients.osrm_client import OsrmClient
@@ -38,72 +17,6 @@ try:
 except Exception as e:
     BACKEND_AVAILABLE = False
     BACKEND_ERROR = str(e)
-
-# ─── Light palette ────────────────────────────────────────────────────────────
-C = {"bg": "#F4F7FB", "panel": "#FFFFFF", "card": "#FFFFFF", "card_alt": "#F0F5FB", "input": "#FFFFFF",
-     "input_bd": "#ADC0D4", "accent1": "#1A6FC4", "accent2": "#D05A10", "accent3": "#2A8C3F", "accent4": "#B07800",
-     "text": "#1C2B3A", "subtext": "#6B7F94", "border": "#D0DCE8", "ok": "#2A8C3F",
-     "warn": "#D05A10", "err": "#C0253A", "hdr_bg": "#1A3A5C", "hdr_fg": "#E8F4FF", "hover": "#e6f0ff", }
-
-MODE_COLOR = {"flight": C["accent1"], "car": C["accent2"], "train": C["accent3"]}
-MODE_ICON = {"flight": "✈", "car": "🚗", "train": "🚆"}
-
-CITY_SUGGESTIONS = sorted([ "Amsterdam", "Athens", "Barcelona", "Berlin", "Brașov", "Bucharest",
-    "Budapest", "Cluj-Napoca", "Copenhagen", "Dublin", "Frankfurt",
-    "Geneva", "Hamburg", "Helsinki", "Iași", "Istanbul", "Lisbon",
-    "London", "Luxembourg", "Lyon", "Madrid", "Milan", "Munich",
-    "Nice", "Oslo", "Paris", "Prague", "Rome", "Rotterdam",
-    "Sofia", "Stockholm", "Timișoara", "Vienna", "Warsaw", "Zurich", ])
-
-FT = ("Segoe UI", 18, "bold")
-FH = ("Segoe UI", 11, "bold")
-FB = ("Segoe UI", 10)
-FS = ("Segoe UI", 9)
-FSB = ("Segoe UI", 9, "bold")
-
-def lbl(parent, text, font=None, fg=None, bg=None, **kw):
-    return tk.Label(parent, text=text, font=font or FB, fg=fg or C["text"], bg=bg or C["panel"], **kw)
-
-def hsep(parent, padx=10, pady=4):
-    tk.Frame(parent, height=1, bg=C["border"]).pack(fill="x", padx=padx, pady=pady)
-
-def vsep(parent):
-    return tk.Frame(parent, width=1, bg=C["border"])
-
-def action_btn(parent, text, command, color=None, fg="white", width=None):
-    b = tk.Button(parent, text=text, command=command, font=FSB, fg=fg, bg=color or C["accent1"],
-                  activebackground="#0F4A8A", activeforeground="white", relief="flat", bd=0, padx=14, pady=7, cursor="hand2")
-    if width:
-        b.config(width=width)
-    return b
-
-def styled_combo(parent, values, textvariable=None, width=14):
-    style = ttk.Style()
-    style.theme_use("clam")
-    style.configure("L.TCombobox", fieldbackground=C["input"], background=C["input"],
-                    foreground=C["text"], arrowcolor=C["accent1"], bordercolor=C["input_bd"], lightcolor=C["input_bd"],
-                    darkcolor=C["input_bd"], selectbackground=C["accent1"], selectforeground="white")
-    return ttk.Combobox(parent, values=values, textvariable=textvariable, width=width, font=FB, state="readonly", style="L.TCombobox")
-
-def outlined_date(parent, textvariable=None, width=14):
-    wrap = tk.Frame(parent, bg=C["input_bd"], padx=1, pady=1)
-
-    if HAS_CALENDAR:
-        from datetime import date
-        d = DateEntry(wrap, textvariable=textvariable, font=FB, background=C["accent1"], foreground="white",
-                      normalbackground=C["input"], normalforeground=C["text"], borderwidth=0,
-                      date_pattern="yyyy-mm-dd", mindate=date.today(), width=width, showweeknumbers=False)
-        d.pack(fill="x", padx=2, pady=2)
-        return wrap, d
-    else:
-        e = tk.Entry( wrap, textvariable=textvariable, width=width, font=FB, fg=C["text"], bg=C["input"],
-            insertbackground=C["accent1"], relief="flat", bd=4, highlightthickness=0 )
-        e.pack(fill="x")
-        return wrap, e
-
-def fmt_time(minutes):
-    h, m = divmod(int(minutes), 60)
-    return f"{h}h {m:02d}m" if h else f"{m}m"
 
 # ─── Autocomplete Entry ───────────────────────────────────────────────────────
 
@@ -260,6 +173,7 @@ class SortBar(tk.Frame):
 class TravelApp(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.graphs = Graphs()
         self.title("✈ Travel Offer Manager")
         self.configure(bg=C["bg"])
         self.geometry("1180x790")
@@ -270,6 +184,7 @@ class TravelApp(tk.Tk):
         self.hotel_results = []
         self._build_header()
         self._build_tabs()
+
 
     def _init_services(self):
         self.flight_svc = self.car_svc = self.train_svc = self.hotel_svc = None
@@ -319,7 +234,7 @@ class TravelApp(tk.Tk):
 
         t3 = tk.Frame(nb, bg=C["bg"])
         nb.add(t3, text="  📊  Statistics  ")
-        self._build_stats_tab(t3)
+        self.graphs._build_stats_tab(t3)
 
     # =========================================================================
     #  TAB 1 – SEARCH
@@ -637,6 +552,7 @@ class TravelApp(tk.Tk):
             messagebox.showwarning("Same city", "Origin and destination must be different.")
             return
         self.results = []
+        self.graphs.results = []
         self._show_placeholder("🔄  Searching — please wait…")
         self.search_status.config(text="Fetching offers…", fg=C["accent1"])
         Thread(target=self._fetch_all, args=(origin, dest), daemon=True).start()
@@ -704,6 +620,7 @@ class TravelApp(tk.Tk):
                 print(f"[Train] {e}")
 
         self.results = [r for r in results if p_min <= r["price"] <= p_max]
+        self.graphs.results = self.results
         self.after(0, self._on_search_done)
 
     def _on_search_done(self):
@@ -712,8 +629,8 @@ class TravelApp(tk.Tk):
             text=f"✓ {n} offer{'s' if n != 1 else ''} found.",
             fg=C["ok"] if n else C["err"])
         self._render_results()
-        if HAS_MPL:
-            self._update_stats()
+        if self.graphs.HAS_MPL:
+            self.graphs._update_stats()
 
     # =========================================================================
     #  TAB 2 – HOTELS
@@ -893,89 +810,6 @@ class TravelApp(tk.Tk):
                 det_items.append(f"🛌 {bed_txt}")
             for t in det_items:
                 lbl(room_det, t, font=FS, fg=C["subtext"], bg=bg).pack(side="left", padx=(0, 12))
-
-    # =========================================================================
-    #  TAB 3 – STATISTICS
-    # =========================================================================
-
-    def _build_stats_tab(self, parent):
-        lbl(parent, "  Statistics", font=FH, fg=C["accent1"], bg=C["bg"]).pack(anchor="w", pady=(12, 2), padx=14)
-        hsep(parent, padx=14, pady=0)
-        if not HAS_MPL:
-            lbl(parent, "Install matplotlib:\n  pip install matplotlib", font=FH, fg=C["warn"], bg=C["bg"]).pack(pady=40)
-            return
-        self.stats_frame = tk.Frame(parent, bg=C["bg"])
-        self.stats_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        self._update_stats()
-
-    def _update_stats(self):
-        if not HAS_MPL or not hasattr(self, "stats_frame"):
-            return
-        for w in self.stats_frame.winfo_children():
-            w.destroy()
-        if not self.results:
-            lbl(self.stats_frame, "Run a travel search first to see statistics.", font=FH, fg=C["subtext"], bg=C["bg"]).pack(pady=50)
-            return
-
-        modes = [r["mode"] for r in self.results]
-        prices = [r["price"] for r in self.results]
-        durations = [r["duration_min"] for r in self.results]
-        bar_lbl = [f"{MODE_ICON[m]}\n{m}\n€{p:.0f}" for m, p in zip(modes, prices)]
-        colors = [MODE_COLOR[m] for m in modes]
-
-        fig = Figure(figsize=(11, 7), facecolor=C["bg"])
-        fig.subplots_adjust(hspace=0.5, wspace=0.35)
-
-        # 1 – Price bar
-        ax1 = fig.add_subplot(2, 2, 1)
-        ax1.set_facecolor(C["card_alt"])
-        bars = ax1.bar(bar_lbl, prices, color=colors, width=0.55, edgecolor="white", linewidth=0.5)
-        for bar, p in zip(bars, prices):
-            ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(prices) * 0.01,f"€{p:.0f}", ha="center", va="bottom", color=C["text"], fontsize=8)
-        ax1.set_title("Price Comparison (€)", color=C["text"], fontsize=10, pad=8)
-        ax1.tick_params(colors=C["subtext"], labelsize=7)
-        ax1.spines[:].set_color(C["border"])
-        ax1.set_ylabel("EUR", color=C["subtext"], fontsize=8)
-
-        # 2 – Travel time horizontal bar
-        ax2 = fig.add_subplot(2, 2, 2)
-        ax2.set_facecolor(C["card_alt"])
-        dur_h = [d / 60 for d in durations]
-        bars2 = ax2.barh(bar_lbl, dur_h, color=colors, edgecolor="white", linewidth=0.5)
-        for bar, d in zip(bars2, durations):
-            ax2.text(bar.get_width() + 0.04, bar.get_y() + bar.get_height() / 2, fmt_time(d), va="center", color=C["text"], fontsize=8)
-        ax2.set_title("Travel Time", color=C["text"], fontsize=10, pad=8)
-        ax2.tick_params(colors=C["subtext"], labelsize=7)
-        ax2.spines[:].set_color(C["border"])
-        ax2.set_xlabel("Hours", color=C["subtext"], fontsize=8)
-
-        # 3 – Price vs. Comfort
-        ax3 = fig.add_subplot(2, 2, 3)
-        ax3.set_facecolor(C["card_alt"])
-        for r in self.results:
-            ax3.scatter(r["price"], r.get("comfort", 5), color=MODE_COLOR[r["mode"]], s=140, edgecolors="white", linewidths=0.5, zorder=3)
-            ax3.annotate(MODE_ICON[r["mode"]], (r["price"], r.get("comfort", 5)), textcoords="offset points", xytext=(5, 3), color=MODE_COLOR[r["mode"]], fontsize=11)
-        ax3.set_title("Price vs Comfort", color=C["text"], fontsize=10, pad=8)
-        ax3.set_xlabel("Price (€)", color=C["subtext"], fontsize=8)
-        ax3.set_ylabel("Comfort (1–10)", color=C["subtext"], fontsize=8)
-        ax3.tick_params(colors=C["subtext"], labelsize=7)
-        ax3.spines[:].set_color(C["border"])
-        ax3.set_ylim(0, 11)
-        ax3.grid(color=C["border"], linewidth=0.5, alpha=0.6)
-
-        # 4 – Mode pie
-        ax4 = fig.add_subplot(2, 2, 4)
-        ax4.set_facecolor(C["bg"])
-        mc = {}
-        for m in modes:
-            mc[m] = mc.get(m, 0) + 1
-        ax4.pie(list(mc.values()), labels=[f"{MODE_ICON[m]} {m}" for m in mc], colors=[MODE_COLOR[m] for m in mc], autopct="%1.0f%%", textprops={"color": C["text"], "fontsize": 9}, wedgeprops={"edgecolor": C["bg"], "linewidth": 2})
-        ax4.set_title("Offers by Mode", color=C["text"], fontsize=10, pad=8)
-
-        canvas = FigureCanvasTkAgg(fig, master=self.stats_frame)
-        canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True)
-
 
 if __name__ == "__main__":
     app = TravelApp()
